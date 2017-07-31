@@ -1,6 +1,7 @@
+
 #include<stdio.h>
-#define VEXNUM_X 4
-#define VEXNUM_Y 4
+#define VEXNUM_X 7
+#define VEXNUM_Y 7
 #define W 1
 typedef enum vex_type{
 	COM,START,END,BLOCK
@@ -14,7 +15,8 @@ typedef struct node{
 node open_t[VEXNUM_X*VEXNUM_Y];
 node close_t[VEXNUM_X*VEXNUM_Y];
 node node_map[VEXNUM_X][VEXNUM_Y];
-char map[VEXNUM_X][VEXNUM_Y] = {{'S','.','X','.'},{'.','.','X','.'},{'.','.','X','D'},{'.','.','.','.'}};
+// char map[VEXNUM_X][VEXNUM_Y];
+// = {{'S','.','X','.'},{'.','.','X','.'},{'.','.','X','D'},{'.','.','.','.'}};
 int open_index=0,close_index=0;
 node *start_n,*end_n;
 
@@ -22,7 +24,7 @@ int abs(int a){
 	return a>0?a:-a;
 }
 
-//¼ÆËãÁ½µã¹şÃÜ¶Ù¾àÀë£¬¼´A star ÖĞµÄhÖµ
+//è®¡ç®—ä¸¤ç‚¹å“ˆå¯†é¡¿è·ç¦»ï¼Œå³A star ä¸­çš„hå€¼
 int dis_h(node *curr_nd,node *end_nd){
 	return abs(curr_nd->x - end_nd->x) + abs(curr_nd->y - end_nd->y);
 }
@@ -33,23 +35,23 @@ void swap_nd(node *a,node *b){
 	*b=tmp;
 }
 
-//½¨¶Ñ²¢µ÷Õû×îĞ¡¶Ñ
+//å»ºå †å¹¶è°ƒæ•´æœ€å°å †
 void adjust_heap(int index){
 //	if(index <= 1 || index >= open_index) return;
 	int curr = index;
 	int parent = (curr - 1) >> 1;
 	int child = (curr << 1) + 1;
-	//µ±Ç°½ÚµãÊÇ×ó»¹ÊÇÓÒ
+	//å½“å‰èŠ‚ç‚¹æ˜¯å·¦è¿˜æ˜¯å³
 	//int lef = (index & 1);
-	//1.µ÷Õûºóµ±Ç°½ÚµãĞ¡ÓÚ¸¸½Úµã,ÍùÉÏµ÷Õû
+	//1.è°ƒæ•´åå½“å‰èŠ‚ç‚¹å°äºçˆ¶èŠ‚ç‚¹,å¾€ä¸Šè°ƒæ•´
 	while((open_t[curr].g + open_t[curr].h) < (open_t[parent].g+open_t[parent].h) && parent >= 0){
 		swap_nd(&open_t[curr],&open_t[parent]);
 		curr=parent;
 		parent =(curr - 1) >> 1;
 	}
-	// 2. µ÷Õûºóµ±Ç°Öµ´óÓÚ×Ó½Úµã£¬ÍùÏÂµ÷Õû£¬Òª±È½Ï×óÓÒº¢Ö½
+	// 2. è°ƒæ•´åå½“å‰å€¼å¤§äºå­èŠ‚ç‚¹ï¼Œå¾€ä¸‹è°ƒæ•´ï¼Œè¦æ¯”è¾ƒå·¦å³å­©çº¸
 	while(child < open_index){
-		//×óº¢Ö½
+		//å·¦å­©çº¸
 		if((open_t[curr].g + open_t[curr].h) > (open_t[child].g + open_t[child].h )){
 			swap_nd(&open_t[curr],&open_t[child]);
 			curr = child;
@@ -87,11 +89,11 @@ void insert_open_table(node *curr_n,node *neighbor,int w){
 	}
 }
 
-//²éÕÒÁÚ¾Ó½Úµã
+//æŸ¥æ‰¾é‚»å±…èŠ‚ç‚¹
 void get_neighbor(node *curr_n){
 	int x=curr_n->x;
 	int y=curr_n->y;
-	//ÓĞ×ó½Úµã²¢ÇÒ²»ÊÇÕÏ°­Îï
+	//æœ‰å·¦èŠ‚ç‚¹å¹¶ä¸”ä¸æ˜¯éšœç¢ç‰©
 	if(x-1>=0 && node_map[x-1][y].tp != BLOCK){
 		insert_open_table(curr_n,&(node_map[x-1][y]),1);
 	}
@@ -106,14 +108,46 @@ void get_neighbor(node *curr_n){
 	}
 }
 
-
+int init(FILE *f){
+	int i,j,m,n,t;
+	char c;
+	fscanf(f,"%d%d%d",&n,&m,&t);
+	if(m==0&&n==0&&t==0) return 0;
+	fscanf(f,"%c",&c);
+	for(i=0;i<n;i++){
+		for(j=0;j<m;j++){
+			fscanf(f,"%c",&c);
+//			if(c=='\n') break;
+			node_map[i][j].x=i;
+			node_map[i][j].y=j;
+			if(c == '.'){
+				node_map[i][j].tp=COM;
+			}else if(c == 'X'){
+				node_map[i][j].tp=BLOCK;
+			}else if(c == 'S'){
+				node_map[i][j].tp=START;
+				start_n=&(node_map[i][j]);
+			}else if(c == 'D'){
+				node_map[i][j].tp=END;
+				end_n=&(node_map[i][j]);
+			}
+			node_map[i][j].g=0;
+			node_map[i][j].h=0;
+			node_map[i][j].is_in_open=0;
+			node_map[i][j].is_in_close=0;
+		}
+		fscanf(f,"%c",&c);
+	}
+//	fclose(f);
+	return 1;
+}
 
 int main(){
 //	int ei=2,ej=3;
-	int i,j,is_found;
+	int m,n,t,i,j,is_found;
 
-	//³õÊ¼»¯Êı¾İ
-	for(i=0;i<VEXNUM_X;i++){
+	//åˆå§‹åŒ–æ•°æ®
+/* 	for(i=0;i<VEXNUM_X;i++){
 		for(j=0;j<VEXNUM_Y;j++){
 			node_map[i][j].x=i;
 			node_map[i][j].y=j;
@@ -133,46 +167,82 @@ int main(){
 			node_map[i][j].is_in_open=0;
 			node_map[i][j].is_in_close=0;
 		}
-	}
-	if(start_n->x == end_n->x && start_n->y == end_n->y){
-		printf("start node same with end node ,return ...");
-		return 0;
-	}
-	//1.°ÑÆğÊ¼µã¼ÓÈëopen table£»
-	start_n->is_in_open=1;
-	start_n->h=dis_h(start_n,end_n);
-	open_t[open_index++]=*start_n;
+	} */
+
 	is_found=0;
 	node *curr;
 	int k=0;
+	FILE *f;
+	char c;
+	f=fopen("D:\\code\\gcc\\1010.txt","r");
 	while(1){
-		curr = &(node_map[open_t[0].x][open_t[0].y]);
-		printf("µÚ%d´Î%d %d\n",++k,curr->x,curr->y);
-		curr->is_in_close=1;
-		close_t[close_index++]=*curr;
-		open_t[0]=open_t[--open_index];
-		adjust_heap(0);
-		if(curr->x==end_n->x && curr->y == end_n->y){
-			is_found=1;
-			break;
+		fscanf(f,"%d%d%d",&n,&m,&t);
+		if(m==0&&n==0&&t==0) return 0;
+		fscanf(f,"%c",&c);
+		for(i=0;i<n;i++){
+			for(j=0;j<m;j++){
+				fscanf(f,"%c",&c);
+	//			if(c=='\n') break;
+				node_map[i][j].x=i;
+				node_map[i][j].y=j;
+				if(c == '.'){
+					node_map[i][j].tp=COM;
+				}else if(c == 'X'){
+					node_map[i][j].tp=BLOCK;
+				}else if(c == 'S'){
+					node_map[i][j].tp=START;
+					start_n=&(node_map[i][j]);
+				}else if(c == 'D'){
+					node_map[i][j].tp=END;
+					end_n=&(node_map[i][j]);
+				}
+				node_map[i][j].g=0;
+				node_map[i][j].h=0;
+				node_map[i][j].is_in_open=0;
+				node_map[i][j].is_in_close=0;
+			}
+			fscanf(f,"%c",&c);
 		}
-		get_neighbor(curr);
-		if(open_index <=0){break;}
+//		fscanf(f,"%c",&c);
+		if(start_n->x == end_n->x && start_n->y == end_n->y){
+			printf("YES");
+			continue;
+		}
+		//1.æŠŠèµ·å§‹ç‚¹åŠ å…¥open tableï¼›
+		start_n->is_in_open=1;
+		start_n->h=dis_h(start_n,end_n);
+		open_t[open_index++]=*start_n;
+		while(1){
+			curr = &(node_map[open_t[0].x][open_t[0].y]);
+	//		printf("ç¬¬%dæ¬¡%d %d\n",++k,curr->x,curr->y);
+			curr->is_in_close=1;
+			close_t[close_index++]=*curr;
+			open_t[0]=open_t[--open_index];
+			adjust_heap(0);
+			if(curr->x==end_n->x && curr->y == end_n->y){
+				is_found=1;
+				break;
+			}
+			get_neighbor(curr);
+			if(open_index <=0){break;}
+		}
+		printf("\nis_found=%d\n",is_found);
+		k=0;
+		if(is_found){
+			curr=end_n;
+			while(curr!=start_n){
+				printf("(%d,%d)-->",curr->x,curr->y);
+				curr=curr->parent;
+				if(k++>100){break;}
+			}
+			printf("(%d,%d)",start_n->x,start_n->y);
+		}
+		printf("\nk=%d\n",k);
+		for(k=0;k<close_index;k++){
+			printf("(%d,%d,0x%p)-->",close_t[k].x,close_t[k].y,close_t[k].parent);
+		}
 	}
-	printf("\nis_found=%d\n",is_found);
-    k=0;
-	if(is_found){
-        curr=end_n;
-        while(curr!=start_n){
-            printf("(%d,%d)-->",curr->x,curr->y);
-            curr=curr->parent;
-            if(k++>100){break;}
-        }
-        printf("(%d,%d)",start_n->x,start_n->y);
-	}
-	printf("\nk=%d\n",k);
-    for(k=0;k<close_index;k++){
-        printf("(%d,%d,0x%p)-->",close_t[k].x,close_t[k].y,close_t[k].parent);
-    }
+	
+	fclose(f);
 	return 0;
 }
