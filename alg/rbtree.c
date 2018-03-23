@@ -19,17 +19,21 @@ typedef struct {
     int node_num;
 } tree_t;
 
+static node_t *leaf_node;
+
 /*
-  ×óÐý
+  å·¦æ—‹
 */
 void left_rotate(tree_t *t,node_t* x)
 {
     node_t *y = x->right;
-    // ½«YµÄ×ó½Úµã·Åµ½xµÄÓÒ½ÚµãÉÏ
-    x->right=y->left;
-    y->left->parent=x;
-
-    //yµÄ¸¸½ÚµãÖÃÎªxµÄ¸¸½Úµã
+    // å°†Yçš„å·¦èŠ‚ç‚¹æ”¾åˆ°xçš„å³èŠ‚ç‚¹ä¸Š
+	x->right=y->left;		
+	if(y->left!=NULL){
+		y->left->parent=x;
+	}
+	y->parent=x->parent;
+	//yçš„çˆ¶èŠ‚ç‚¹ç½®ä¸ºxçš„çˆ¶èŠ‚ç‚¹
     if(x->parent==NULL) {
         t->root=y;
     } else {
@@ -38,25 +42,26 @@ void left_rotate(tree_t *t,node_t* x)
         } else {
             x->parent->right=y;
         }
-        y->parent=x->parent;
     }
 
-    // yµÄ×ó½ÚµãÖÃÎªx
+    // yçš„å·¦èŠ‚ç‚¹ç½®ä¸ºx
     y->left=x;
     x->parent=y;
 }
 
 /*
-    ÓÒÐý
+    å³æ—‹
 */
 void right_rotate(tree_t *t,node_t *x)
 {
     node_t *y=x->left;
-
-    x->left=y->right;
-    y->right->parent=x;
-
-    if(x->parent==NULL) {
+	
+	x->left=y->right;
+	if(y->right!=NULL){
+		y->right->parent=x;
+	}
+	y->parent=x->parent;
+	if(x->parent==NULL) {
         t->root=y;
     } else {
         if(x->parent->left==x) {
@@ -64,35 +69,38 @@ void right_rotate(tree_t *t,node_t *x)
         } else {
             x->parent->right=y;
         }
-        y->parent=x->parent;
     }
 
     y->right=x;
     x->parent=y;
 }
 
+static inline color_enum color_of_node(node_t *x){
+	return x==NULL?BLACK:x->color;
+}
+
 void fix_after_insert(tree_t *t,node_t *z)
 {
-    while(z->parent->color==RED) {
-        //¸¸½ÚµãÎª¸¸¸¸½ÚµãµÄ×ó½Úµã
+    while(z!=NULL&&color_of_node(z->parent)==RED) {
+        //çˆ¶èŠ‚ç‚¹ä¸ºçˆ¶çˆ¶èŠ‚ç‚¹çš„å·¦èŠ‚ç‚¹
         if(z->parent==z->parent->parent->left) {
-            //ÕÒµ½¸¸½ÚµãµÄÐÖµÜ½Úµã
+            //æ‰¾åˆ°çˆ¶èŠ‚ç‚¹çš„å…„å¼ŸèŠ‚ç‚¹
             node_t *y=z->parent->parent->right;
-            // case 1 start : ¸¸½ÚµãÎªºìÉ«£¬¸¸½ÚµãµÄÐÖµÜ½ÚµãÎªºìÉ«
-            if(y->color==RED) {
-                z->parent->color=BLACK;     // ¸¸½ÚµãÖÃÎªºìÉ«
-                z->parent->parent->color=RED;   //×æ¸¸½ÚµãÖÃÎªºìÉ«
-                y->color=BLACK;         //¸¸½ÚµãµÄÐÖµÜ½ÚµãÖÃÎªºÚÉ«
-                z=z->parent->parent;    //µ±Ç°½ÚµãÖÃÎª×æ¸¸½ÚµãÍùÉÏµ÷Õû
+            // case 1 start : çˆ¶èŠ‚ç‚¹ä¸ºçº¢è‰²ï¼Œçˆ¶èŠ‚ç‚¹çš„å…„å¼ŸèŠ‚ç‚¹ä¸ºçº¢è‰²
+            if(color_of_node(y)==RED) {
+                z->parent->color=BLACK;     // çˆ¶èŠ‚ç‚¹ç½®ä¸ºçº¢è‰²
+                z->parent->parent->color=RED;   //ç¥–çˆ¶èŠ‚ç‚¹ç½®ä¸ºçº¢è‰²
+                y->color=BLACK;         //çˆ¶èŠ‚ç‚¹çš„å…„å¼ŸèŠ‚ç‚¹ç½®ä¸ºé»‘è‰²
+                z=z->parent->parent;    //å½“å‰èŠ‚ç‚¹ç½®ä¸ºç¥–çˆ¶èŠ‚ç‚¹å¾€ä¸Šè°ƒæ•´
             }
             //case 1 end
             else {
-                // case 2 start : ¸¸½ÚµãÎªºìÉ«£¬¸¸½ÚµãµÄÐÖµÜ½ÚµãÎªºÚÉ«£¬zÎª¸¸½ÚµãµÄÓÒº¢×Ó
+                // case 2 start : çˆ¶èŠ‚ç‚¹ä¸ºçº¢è‰²ï¼Œçˆ¶èŠ‚ç‚¹çš„å…„å¼ŸèŠ‚ç‚¹ä¸ºé»‘è‰²ï¼Œzä¸ºçˆ¶èŠ‚ç‚¹çš„å³å­©å­
                 if(z==z->parent->right) {
                     z=z->parent;
                     left_rotate(t,z);
                 }
-                //case 2 end ,×ª»¯³Écase 3
+                //case 2 end ,è½¬åŒ–æˆcase 3
                 z->parent->color=BLACK;
                 z->parent->parent->color=RED;
                 right_rotate(t,z->parent->parent);
@@ -100,10 +108,10 @@ void fix_after_insert(tree_t *t,node_t *z)
         } else {
             if(z->parent==z->parent->parent->right) {
                 node_t *y=z->parent->parent->left;
-                if(y->color==RED) {
+                if(color_of_node(y)==RED) {
                     z->parent->color=BLACK;
                     y->color=BLACK;
-                    z->parent->parent=RED;
+                    z->parent->parent->color=RED;
                     z=z->parent->parent;
                 } else {
                     if(z->parent->left==z) {
@@ -125,7 +133,9 @@ int insert_node(tree_t *t,int data)
     node_t *node=(node_t *)malloc(sizeof(node_t));
     node->data=data;
     node->color=RED;
-    node->left=node->right=node->parent=NULL;
+//    node->left=node->right=leaf_node;
+	node->left=node->right=NULL;
+	node->parent=NULL;
     node->height=0;
     if(t==NULL) t=(tree_t *)malloc(sizeof(tree_t));
     if(t->root==NULL) {
@@ -137,16 +147,15 @@ int insert_node(tree_t *t,int data)
     //find the position on the tree
     node_t *nt=t->root,*parent;
     while(nt!=NULL) {
-        if(data==nt->data) {
-            printf("data:%d has already in the tree,return",data);
+        parent=nt;
+		if(data==nt->data) {
+            printf("data:%d has already in the tree,return\n",data);
             return 0;
         } else if(data>nt->data) {
             // right tree;
-            parent=nt;
             nt=nt->right;
         } else {
             //left tree
-            parent=nt;
             nt=nt->left;
         }
     }
@@ -164,7 +173,7 @@ int insert_node(tree_t *t,int data)
 int count_height(tree_t *t,node_t *n)
 {
     if(n==NULL) return 0;
-    if(n->height==0)
+    if(n->height==0&&n->parent!=NULL)
         n->height=n->parent->height+1;
     count_height(t,n->left);
     count_height(t,n->right);
@@ -174,22 +183,32 @@ int count_height(tree_t *t,node_t *n)
 void print_tree(tree_t *t,node_t *n,int last_height)
 {
     if(n==NULL) return;
-    if(n->height!=last_height) printf("\n");
-    printf("data=%d,height=%d,parent=%p,color=%d",n->data,n->height,n->parent,n->color);
+    if(n->height!=last_height) {
+		printf("\n");
+		last_height=n->height;
+	}
+	printf("data=%d,height=%d,me=%p,parent=%p,color=%d\n",n->data,n->height,n,n->parent,n->color);
+	print_tree(t,n->left,last_height);
+	print_tree(t,n->right,last_height);
 }
 
 int main(int argc,char **argv)
 {
     int i,n=10;
-    int ar[]= {1,6,2,3,7,81,1,9,100,1};
-    tree_t *t=(tree_t *)malloc(sizeof(tree_t));
+    int ar[]= {1,6,2,3,7,81,1,9,100,10};
+	leaf_node=(node_t *)malloc(sizeof(node_t));
+	leaf_node->color=BLACK;
+	leaf_node->data=0;
+	leaf_node->left=leaf_node->right=leaf_node->parent=NULL;
+	
+	tree_t *t=(tree_t *)malloc(sizeof(tree_t));
     t->root=NULL;
     t->node_num=0;
     for(i=0; i<n; i++) {
+		printf("put array[%d]=%d\n",i,ar[i]);
         insert_node(t,ar[i]);
     }
     count_height(t,t->root);
     print_tree(t,t->root,t->root->height);
-    system("pause");
     return 0;
 }
