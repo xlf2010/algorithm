@@ -22,7 +22,7 @@ int abs(int a){
 	return a>0?a:-a;
 }
 
-//¼ÆËãÁ½µã¹şÃÜ¶Ù¾àÀë£¬¼´A star ÖĞµÄhÖµ
+//è®¡ç®—ä¸¤ç‚¹å“ˆå¯†é¡¿è·ç¦»ï¼Œå³A star ä¸­çš„hå€¼
 int dis_h(node *curr_nd,node *end_nd){
 	return abs(curr_nd->x - end_nd->x) + abs(curr_nd->y - end_nd->y);
 }
@@ -33,23 +33,23 @@ void swap_nd(node *a,node *b){
 	*b=tmp;
 }
 
-//½¨¶Ñ²¢µ÷Õû×îĞ¡¶Ñ
+//å»ºå †å¹¶è°ƒæ•´æœ€å°å †
 void adjust_heap(int index){
 //	if(index <= 1 || index >= open_index) return;
 	int curr = index;
 	int parent = (curr - 1) >> 1;
 	int child = (curr << 1) + 1;
-	//µ±Ç°½ÚµãÊÇ×ó»¹ÊÇÓÒ
+	//å½“å‰èŠ‚ç‚¹æ˜¯å·¦è¿˜æ˜¯å³
 	//int lef = (index & 1);
-	//1.µ÷Õûºóµ±Ç°½ÚµãĞ¡ÓÚ¸¸½Úµã,ÍùÉÏµ÷Õû
+	//1.è°ƒæ•´åå½“å‰èŠ‚ç‚¹å°äºçˆ¶èŠ‚ç‚¹,å¾€ä¸Šè°ƒæ•´
 	while((open_t[curr].g + open_t[curr].h) < (open_t[parent].g+open_t[parent].h) && parent >= 0){
 		swap_nd(&open_t[curr],&open_t[parent]);
 		curr=parent;
 		parent =(curr - 1) >> 1;
 	}
-	// 2. µ÷Õûºóµ±Ç°Öµ´óÓÚ×Ó½Úµã£¬ÍùÏÂµ÷Õû£¬Òª±È½Ï×óÓÒº¢Ö½
+	// 2. è°ƒæ•´åå½“å‰å€¼å¤§äºå­èŠ‚ç‚¹ï¼Œå¾€ä¸‹è°ƒæ•´ï¼Œè¦æ¯”è¾ƒå·¦å³å­©çº¸
 	while(child < open_index){
-		//×óº¢Ö½
+		//å·¦å­©çº¸
 		if((open_t[curr].g + open_t[curr].h) > (open_t[child].g + open_t[child].h )){
 			swap_nd(&open_t[curr],&open_t[child]);
 			curr = child;
@@ -87,11 +87,11 @@ void insert_open_table(node *curr_n,node *neighbor,int w){
 	}
 }
 
-//²éÕÒÁÚ¾Ó½Úµã
+//æŸ¥æ‰¾é‚»å±…èŠ‚ç‚¹
 void get_neighbor(node *curr_n){
 	int x=curr_n->x;
 	int y=curr_n->y;
-	//ÓĞ×ó½Úµã²¢ÇÒ²»ÊÇÕÏ°­Îï
+	//æœ‰å·¦èŠ‚ç‚¹å¹¶ä¸”ä¸æ˜¯éšœç¢ç‰©
 	if(x-1>=0 && node_map[x-1][y].tp != BLOCK){
 		insert_open_table(curr_n,&(node_map[x-1][y]),1);
 	}
@@ -112,7 +112,7 @@ int main(){
 //	int ei=2,ej=3;
 	int i,j,is_found;
 
-	//³õÊ¼»¯Êı¾İ
+	//åˆå§‹åŒ–æ•°æ®
 	for(i=0;i<VEXNUM_X;i++){
 		for(j=0;j<VEXNUM_Y;j++){
 			node_map[i][j].x=i;
@@ -138,7 +138,7 @@ int main(){
 		printf("start node same with end node ,return ...");
 		return 0;
 	}
-	//1.°ÑÆğÊ¼µã¼ÓÈëopen table£»
+	//1.æŠŠèµ·å§‹ç‚¹åŠ å…¥open tableï¼›
 	start_n->is_in_open=1;
 	start_n->h=dis_h(start_n,end_n);
 	open_t[open_index++]=*start_n;
@@ -147,7 +147,7 @@ int main(){
 	int k=0;
 	while(1){
 		curr = &(node_map[open_t[0].x][open_t[0].y]);
-		printf("µÚ%d´Î%d %d\n",++k,curr->x,curr->y);
+		printf("ç¬¬%dæ¬¡%d %d\n",++k,curr->x,curr->y);
 		curr->is_in_close=1;
 		close_t[close_index++]=*curr;
 		open_t[0]=open_t[--open_index];
