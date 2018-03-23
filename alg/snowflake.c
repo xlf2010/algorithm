@@ -41,13 +41,16 @@ static int seq=0;
 static pthread_mutex_t mtx=PTHREAD_MUTEX_INITIALIZER;
 
 //获取当前毫秒数
-static long long int get_current_millis(){
+static long long get_current_millis(){
 	static struct timeval tv;
 	gettimeofday(&tv,NULL);
-	return tv.tv_sec*1000+tv.tv_usec/1000;
+	long long sec = (long long)tv.tv_sec * 1000;
+	int mil_sec =  tv.tv_usec/1000;
+	//printf("get now:tvsec=%ld,tvusec=%ld,sec=%lld,mil_sec=%ld,add=%lld\n",tv.tv_sec,tv.tv_usec,sec,mil_sec,sec+mil_sec);
+	return mil_sec+sec;
 }
 
-static long long int get_next_millis(long long ts){
+static long long get_next_millis(long long ts){
 	long long now=get_current_millis();
 	while(now<=ts)
 		now=get_current_millis();
@@ -58,7 +61,7 @@ static long long get_next_id(){
 	long long now=get_current_millis();
 	pthread_mutex_lock(&mtx);
 	if(now<last_timestamp){
-		printf("last timestamp error,now is : %ld,last timestamp is : %ld",now,last_timestamp);
+		printf("last timestamp error,now is : %lld,last timestamp is : %lld",now,last_timestamp);
 		return -1;
 	}
 	if(now==last_timestamp){
@@ -74,21 +77,20 @@ static long long get_next_id(){
 	pthread_mutex_unlock(&mtx);
 	long long res= ((last_timestamp-start_timestamp)<<timestamp_shift)|(data_center_id<<data_center_shift)
 		|(worker_id<<worker_shift)|seq;
+	//printf("get id res=%lld,lt=%lld,st=%lld,tims=%lld\n",res,last_timestamp,start_timestamp,((last_timestamp-start_timestamp)<<timestamp_shift));
 	return res;
 }
 
 void num_to_binary(long long source,char *ret,int bit_len){
 	int i;
 	for(i=0;i<bit_len;i++){
-	//	printf("%lld>>%d=%lld\n",source,i,source>>i);
-		int p=(source>>i);
-		p=p&1;
-		*(ret+(bit_len-i))=(int)((source>>i)&1)+'0';
+		*(ret+(bit_len-i-1))=(int)((source>>i)&1)+'0';
 	}
 }
 
 int main(int argc,char** argv){
-	start_timestamp=get_current_millis();
+	start_timestamp=1<<10;
+		//get_current_millis();
 	data_center_bit_size=5;
 	worker_id_bit_size=5;
 	seq_bit_size=12;
@@ -102,20 +104,16 @@ int main(int argc,char** argv){
 	int i,num=100;
 	long long a[num];
 	for(i=0;i<num;i++){
-		int id=get_next_id();
-	//	printf("get id :%ld\n",id);
+		long long id=get_next_id();
 		a[i]=id;
 	}
 	int j,bit_len=sizeof(long long)*8;
-	char ret[bit_len+1];
-	ret[bit_len]='\0';
+	char *ret =(char *)malloc(sizeof(char)*bit_len+1);
+	*(ret+bit_len)='\0';
 	for(i=0;i<num;i++){
 		num_to_binary(a[i],ret,bit_len);
-		printf("value=%d,binary=%s\n",a[i],ret);
-		for(j=0;j<bit_len+1;j++){
-			printf("%c",ret[j]);
-		}
-		printf("\n");
+		printf("value=%lld,ret len=%d,binary= %s \n",a[i],strlen(ret),ret);
 	}
+	free(ret);
 	return 0;
 }
