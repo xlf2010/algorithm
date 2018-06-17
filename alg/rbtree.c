@@ -78,7 +78,12 @@ void right_rotate(tree_t *t,node_t *x)
 
 //求树颜色，如果节点为空，则节点为叶子节点，返回黑色
 static inline color_enum color_of_node(node_t *x){
-	return x==NULL?BLACK:x->color;
+	return x?x->color:BLACK;
+}
+
+//设置颜色
+static inline void set_node_color(node_t *x,color_enum color){
+	if(x) x->color=color;
 }
 
 /*调整红黑树，分三种情况，以下case都是基于父节点为祖父节点的左节点来讨论，右节点则做相反操作即可
@@ -95,9 +100,9 @@ void fix_after_insert(tree_t *t,node_t *z)
             node_t *y=z->parent->parent->right;
             // case 1 start : 父节点为红色，父节点的兄弟节点为红色
             if(color_of_node(y)==RED) {
-                z->parent->color=BLACK;     // 父节点置为红色
-                z->parent->parent->color=RED;   //祖父节点置为红色
-                y->color=BLACK;         //父节点的兄弟节点置为黑色
+                set_node_color(z->parent,BLACK);     // 父节点置为红色
+                set_node_color(z->parent->parent,RED);   //祖父节点置为红色
+                set_node_color(y,BLACK);         //父节点的兄弟节点置为黑色
                 z=z->parent->parent;    //当前节点置为祖父节点往上调整
             }
             //case 1 end
@@ -108,8 +113,8 @@ void fix_after_insert(tree_t *t,node_t *z)
                     left_rotate(t,z);
                 }
                 //case 2 end ,转化成case 3
-                z->parent->color=BLACK;
-                z->parent->parent->color=RED;
+                set_node_color(z->parent,BLACK);
+                set_node_color(z->parent->parent,RED);
                 right_rotate(t,z->parent->parent);
             }
         } else {
@@ -117,24 +122,24 @@ void fix_after_insert(tree_t *t,node_t *z)
             if(z->parent==z->parent->parent->right) {
                 node_t *y=z->parent->parent->left;
                 if(color_of_node(y)==RED) {
-                    z->parent->color=BLACK;
-                    y->color=BLACK;
-                    z->parent->parent->color=RED;
+                    set_node_color(z->parent,BLACK);
+                    set_node_color(y,BLACK);
+                    set_node_color(z->parent->parent,RED);
                     z=z->parent->parent;
                 } else {
                     if(z->parent->left==z) {
                         z=z->parent;
                         right_rotate(t,z);
                     }
-                    z->parent->color=BLACK;
-                    z->parent->parent->color=RED;
+                    set_node_color(z->parent,BLACK);
+                    set_node_color(z->parent->parent,RED);
                     left_rotate(t,z->parent->parent);
                 }
             }
         }
     }
 	//调整后，将根节点置黑
-    t->root->color=BLACK;
+    set_node_color(t->root,BLACK);
 }
 
 //红黑树插入
@@ -153,7 +158,7 @@ int insert_node(tree_t *t,int data)
     if(t->root==NULL) {
         t->root=node;
         t->node_num=1;
-        node->color=BLACK;
+        set_node_color(node,BLACK);
         return 0;
     }
     //在树中找到node适合的位置，确保树是有序的，parent保存node的父节点指针。
@@ -223,10 +228,52 @@ node_t *find_data_in_tree(tree_t *t,int data){
 	return z;
 }
 
+void fix_after_delete(tree_t *t,node_t *z)
+{
+	node_t *y;
+	while(z&&z!=t->root&&color_of_node(z)==BLACK){
+		//被删除的节点是父节点左孩子
+		if(z==z->parent->left){
+			y=z->parent->right;
+			//case 1：z的兄弟节点为红色节点
+			if(color_of_node(y)==RED){
+				set_node_color(y,BLACK);
+				set_node_color(z->parent,RED);
+				left_rotate(t,z->parent);
+				y=z->parent->right;
+			}
+			//case 2: z的兄弟节点为黑色节点，且两个孩子也为黑色节点
+			if(color_of_node(y->left)==BLACK&&color_of_node(y->right)==BLACK){
+				set_node_color(y,RED);
+				z=z->parent;
+			}else{
+				//case 3: z的兄弟节点为黑色节点，左孩子为红色，右孩子为黑色
+				if(color_of_node(y->right)==BLACK){
+					set_node_color(y->left,BLACK);
+					set_node_color(y,RED);
+					right_rotate(t,y);
+					y=z->parent->right;
+				}
+				//case 4:z的兄弟节点为黑色节点,右孩子为红色节点
+				set_node_color(y,color_of_node(z->parent));
+				set_node_color(z->parent,BLACK);
+				set_node_color(y->right,BLACK);
+				left_rotate(t,z->parent);
+				z=t->root;
+			}
+			
+		}else{
+			//被删除的节点是父节点右孩子，与左节点一样，方向相反
+		}
+	}
+	set_node_color(z,BLACK);
+}
+
 /*
 * 查找当前节点的后继节点
 */
-node_t *find_successor(node_t *n){
+node_t *find_successor(node_t *n)
+{
 	
 	// 如果当前节点的右节点不为空，则右节点的最左节点为后继节点
 	if(n->right){
@@ -238,7 +285,7 @@ node_t *find_successor(node_t *n){
 	}
 	//右节点为空时，寻找最低祖先节点
 	node_t *z=n->parent;
-	while(z&&n=z->right){
+	while(z&&n==z->right){
 		n=z;
 		z=z->parent;
 	}
@@ -248,26 +295,56 @@ node_t *find_successor(node_t *n){
 /*
 * 删除节点
 */
-void delete_node(tree_t *t,int data){
+void delete_node(tree_t *t,int data)
+{
 	node_t *z=find_data_in_tree(t,data);
 	if(z==NULL){
 		printf("can not find data:%d in tree,return",data);
 		return;
 	}
-	node_t *y,*x;
-	//删除没有子节点
-	if(!z->left||z->right){
-		y=z;
-	}else{
+	node_t *y=0,*x=0;
+	//删除的节点有两个子节点,找到删除节点的后继节点，将后继结点的值赋值为当前节点并将要删除的节点指向后继节点
+	if(z->left&&z->right){
 		y=find_successor(z);
+		z->data=y->data;
+		z=y;
 	}
-	if(y->left){
-		x=y->left;
-	}else{
-		x=y->right;
-	}
+	//x保存要删除的节点z的子节点，由于z有两个节点情况已处理，到这里z只可能有1个子节点或没有节点
+	x=z->left?z->left:z->right;
+	//子节点替换被删除的节点
 	if(x){
-		x->parent=y->parent;
+		x->parent=z->parent;
+		//删除的是根节点
+		if(z->parent==NULL)
+			t->root=x;
+		//祖父节点的左孩子
+		else if (z==z->parent->left)
+			z->parent->left=x;
+		else
+			z->parent->right=x;
+		//如果被删除的节点为黑色，性质(从任一节点，从该节点到所有后代的简单路径都包含相同的黑色节点)被破坏，需调整树的结构，如果是红色节点则不影响性质。
+		if(color_of_node(z)==BLACK){
+			fix_after_delete(t,z);
+		}
+		free(z);
+	}else if(z->parent == NULL){
+		//要删除的节点z没有孩子，并且z没有父节点，说明这棵树只有1个节点，直接清空树
+		free(z);
+		free(t);
+	}else{
+		//如果要删除的节点z没有孩子，并且z有父节点，删除节点时，需将父节点的左或右指针置null
+		//如果z是黑色节点，同样需调整树结构
+		if(color_of_node(z)==BLACK){
+			fix_after_delete(t,z);
+		}
+		//调整z的父节点
+		if(z->parent){
+			if(z==z->parent->left)
+				z->parent->left=NULL;
+			else 
+				z->parent->right=NULL;
+		}
+		free(z);
 	}
 }
 
