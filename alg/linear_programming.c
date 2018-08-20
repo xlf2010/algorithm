@@ -39,7 +39,7 @@ typedef struct{
 
 char *file_name="linear_programming_data.txt";
 
-int readData(vector_t *dest,vector_t *dest_basic,matrix_t *not_basic_matrix,matrix_t *basic_matrix,vector_t *feasible_solution){
+int read_data(vector_t *dest,vector_t *dest_basic,matrix_t *not_basic_matrix,matrix_t *basic_matrix,vector_t *feasible_solution){
     FILE *f=fopen(file_name,"r");
     int i,j;
     // 1. 读取目标函数非基变量
@@ -87,7 +87,7 @@ int readData(vector_t *dest,vector_t *dest_basic,matrix_t *not_basic_matrix,matr
     return 0;
 }
 
-void printVector(vector_t *v){
+void print_vector(vector_t *v){
     int i;
     printf("vector name : %s\n   ",v->name);
     for(i=0;i<v->len;i++){
@@ -96,7 +96,7 @@ void printVector(vector_t *v){
     printf("\n");
 }
 
-void printMatrix(matrix_t *mx){
+void print_matrix(matrix_t *mx){
     int i,j;
     printf("matrix name : %s\n ",mx->name);
     for(i=0;i<mx->m;i++){
@@ -108,24 +108,68 @@ void printMatrix(matrix_t *mx){
     printf("\n");
 }
 
+//两个向量交换元素
+int switch_element_in_vector(vector_t *t1,int pos1,vector_t *t2,int pos2){
+	double d=t1->data[pos1];
+	t1->data[pos1]=t2->data[pos2];
+	t2->data[pos2]=d;
+}
+
+// 矩阵两列对换
+int switch_vector_in_matrix(matrix_t *t1,int pos1,matrix_t *t2,int pos2){
+	if(pos1>=t1->n){
+		printf("pos1 %d is greater then matrix t1.n %d \n",pos1,t1->n);
+		return -1;
+	}
+	if(pos2>=t2->n){
+		printf("pos2 %d is greater then matrix t2.n %d \n",pos2,t2->n);
+		return -1;
+	}
+	
+	int i;
+	for (i=0;i<t1->m;i++){
+		double d=t1->data[pos1][i];
+		t1->data[pos1][i]=t2->data[pos2][i];
+		t2->data[pos2][i]=d;
+	}
+	return 0;
+}
+
+// 查找换入基变量
+void find_in_vector(vector_t *dest,vector_t *solution){
+	int i,pos=-1;
+	double max=0;
+	for(i=0;i<dest->len;i++){
+		if(dest->data[i]>max){
+			max=dest->data[i];
+			pos=i;
+		}
+	}
+	
+
+}
+//查找换出基变量
+void find_out_vector(){}
+
 int main(int argc,char **argv){
-    //目标函数向量
+    //非基变量在目标函数系数向量
     vector_t *dest = (vector_t *)malloc(sizeof(vector_t));
     //基变量在目标函数系数向量
     vector_t *dest_basic = (vector_t *)malloc(sizeof(vector_t));
     //非基矩阵
     matrix_t *not_basic_matrix = (matrix_t *)malloc(sizeof(matrix_t));
-    // 基矩阵行
+    // 基矩阵
     matrix_t *basic_matrix = (matrix_t *)malloc(sizeof(matrix_t));;
-    //基可行解个数
+    //基可行解
     vector_t *feasible_solution = (vector_t *)malloc(sizeof(vector_t));
-    // 文件读取数据
-	readData(dest,dest_basic,not_basic_matrix,basic_matrix,feasible_solution);
+    
+	// 文件读取数据
+	read_data(dest,dest_basic,not_basic_matrix,basic_matrix,feasible_solution);
 
-    printVector(dest);
-    printVector(dest_basic);
-    printMatrix(not_basic_matrix);
-    printMatrix(basic_matrix);
-    printVector(feasible_solution);
-
+    print_vector(dest);
+    print_vector(dest_basic);
+    print_matrix(not_basic_matrix);
+    print_matrix(basic_matrix);
+    print_vector(feasible_solution);
+	return 0;
 }
