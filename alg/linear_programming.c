@@ -135,8 +135,8 @@ int switch_vector_in_matrix(matrix_t *t1,int pos1,matrix_t *t2,int pos2){
 	return 0;
 }
 
-// 查找换入基变量
-void find_in_vector(vector_t *dest,vector_t *solution){
+// 查找换入基变量,在目标函数非基变量中查找大于0的最大值的位置
+int find_in_vector(vector_t *dest){
 	int i,pos=-1;
 	double max=0;
 	for(i=0;i<dest->len;i++){
@@ -145,11 +145,14 @@ void find_in_vector(vector_t *dest,vector_t *solution){
 			pos=i;
 		}
 	}
-	
-
+	return pos;
 }
+
 //查找换出基变量
-void find_out_vector(){}
+//basic_matrix 为基矩阵，in_pos_n为换入基变量的列,即not_basic_matrix所在的列向量,
+void find_out_vector(matrix_t *basic_matrix,matrix_t *not_basic_matrix,int in_pos_n,vector_t *feasible_solution){
+	
+}
 
 int main(int argc,char **argv){
     //非基变量在目标函数系数向量
