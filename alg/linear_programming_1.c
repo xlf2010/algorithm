@@ -32,6 +32,12 @@ typedef struct {
 	int basic_flag;		// 是否对应为基变量
 }data_t;
 
+typedef struct{
+	char *name;
+	int size;
+	int *data;
+}int_arr_t;
+
 //定义向量结构体
 typedef struct {
     char *name;		//向量名称
@@ -71,15 +77,18 @@ int read_vector(FILE *f,vector_t *vt,int basic_start,int basic_end,const char *n
 	return 0;
 }
 
-int read_data(vector_t *dest,matrix_t *st_matrix,vector_t *feasible_solution){
+int read_data(vector_t *dest,matrix_t *st_matrix,vector_t *feasible_solution,int_arr_t *basic_position){
     FILE *f=fopen(file_name,"r");
     int i,j,basic_start,basic_end;
     // 1. 读取目标函数非基变量
 	// 读取向量维数，基向量起始结束位置
     fscanf(f,"%d%d%d",&dest->m,&basic_start,&basic_end);
+	basic_position->name="basic position arr";
+	basic_position->size=basic_end - basic_start + 1;
+	basic_position->data=(int *)malloc(sizeof(int) * basic_position->size);
 	read_vector(f,dest,basic_start,basic_end,"dest");
 	// 2. 读取约束条件矩阵
-	int m;
+	int m,k=0;
 	fscanf(f,"%d%d%d%d",&m,&st_matrix->n,&basic_start,&basic_end);
     st_matrix->name="st_matrix";
     st_matrix->vt=(vector_t *)malloc(sizeof(vector_t) * st_matrix->n);
@@ -91,6 +100,7 @@ int read_data(vector_t *dest,matrix_t *st_matrix,vector_t *feasible_solution){
 		//		read_vector(f,vt,basic_start,basic_end,"");
 		if(i>=basic_start && i<=basic_end){
 			vt.basic_flag=BASIC_DATA;
+			basic_position->data[k++]=i;
 		}else{
 			vt.basic_flag=NOT_BASIC_DATA;
 		}
@@ -105,8 +115,9 @@ int read_data(vector_t *dest,matrix_t *st_matrix,vector_t *feasible_solution){
 		}
 	}
 
-    //3 读取基可行解
-    fscanf(f,"%d%d%d",&feasible_solution->m,&basic_start,&basic_end);
+    //3 读取方程组系数，即初始解
+    fscanf(f,"%d",&feasible_solution->m);
+	basic_start=basic_end=-1;	
 	read_vector(f,feasible_solution,basic_start,basic_end,"feasible_solution");
 	fclose(f);
     return 0;
@@ -119,6 +130,15 @@ void print_vector(vector_t *v){
         printf("%lf,%d ",v->data[i].d,v->data[i].basic_flag);
     }
     printf("\n");
+}
+
+void print_array(int_arr_t *arr){
+	printf("\n\narray name : %s\n",arr->name);
+	int i,size=arr->size;
+	for(i=0;i<size;i++){
+		printf("%d ",arr->data[i]);
+	}
+	printf("\n\n");
 }
 
 void print_matrix(matrix_t *mx){
@@ -139,23 +159,18 @@ void print_matrix(matrix_t *mx){
 int find_out_vector(matrix_t *st_matrix,int pos,vector_t *feasible_solution){
 	double min=-1;
 	//换出基变量位置为[pos,j]
-	int i,j=-1,k=0;
+	int i,j=-1;
 
 	for(i=0;i<feasible_solution->m;i++){
 		// 基可行解中基变量，并且约束矩阵中换入变量位置元素大于0
-		if(feasible_solution->data[i].basic_flag == BASIC_DATA){
-			// 非基约束向量小于等于0的不用计算
-			if(st_matrix->vt[pos].data[k].d <= 0){
-				k++;
-				continue;
-			}
-			double d = feasible_solution->data[i].d / st_matrix->vt[pos].data[k].d;
-//			printf("pos=%d,t_matrix->vt[pos].data[%d].d=%lf,i=%d,min=%lf,d=%lf\n",pos,k,st_matrix->vt[pos].data[k].d,i,min,d);
-			if(min<0 || d>0 && d<min){
-				min=d;
-				j=k;
-			}
-			k++;
+		// 非基约束向量小于等于0的不用计算
+		if(st_matrix->vt[pos].data[i].d <= 0)
+			continue;
+		double d = feasible_solution->data[i].d / st_matrix->vt[pos].data[i].d;
+//		printf("pos=%d,t_matrix->vt[pos].data[%d].d=%lf,i=%d,min=%lf,d=%lf\n",pos,k,st_matrix->vt[pos].data[k].d,i,min,d);
+		if(min<0 || d>0 && d<min){
+			min=d;
+			j=i;
 		}
 	}
 	return j;
@@ -195,22 +210,54 @@ int find_in_vector(vector_t *dest,matrix_t *st_matrix){
 	return pos;
 }
 
-// 对矩阵中主元位置st_matrix[m][n]的元素行初等变换
-int matrix_element_transform(vector_t *dest,matrix_t *st_matrix,int m,int n,vector_t *feasible_solution){
+int comp_basic_pos(const void* bp1,const void* bp2){
+	return *(int *)bp1-*(int *)bp2;
+}
+
+// 对矩阵中主元位置st_matrix[in][out]的元素行初等变换
+int matrix_element_transform(vector_t *dest,matrix_t *st_matrix,int in,int out,vector_t *feasible_solution,int_arr_t *basic_position){
 	// 1.查找换出基向量
-	double pivot=st_matrix->vt[m].data[n].d;
+	double pivot=st_matrix->vt[in].data[out].d;
+
 	int i,j;
+	//主元所在的行除以主元的值，将主元化成1
 	for(i=0;i<st_matrix->n;i++){
+		st_matrix->vt[i].data[out].d/=pivot;
+	}
+
+	// 向量维数,按行向量进行变换
+	int matrix_m=st_matrix->vt[in].m;
+	for(i=0;i<matrix_m;i++){
+		// 所在的行等于换出的行所在，前面已处理
+		if(i==out) continue;
+		//主元所在的列向量m对应的第i个元素
+		double d=st_matrix->vt[in].data[i].d;
+		for(j=0;j<st_matrix->n;j++){
+			st_matrix->vt[j].data[i].d -= (d * st_matrix->vt[j].data[out].d);
+		}
+	}
+
+/*
+	for(i=0;i<st_matrix->n;i++){
+		double d=st_matrix->vt[i].data[n].d;
 		for(j=0;j<st_matrix->vt[i].m;j++){
 // 当前行与主元所在的行一致，该行所有元素除主元值，将主元值化成1。如果不是则将主元对应的列向量其他元素换成0，使主元所在的列向量为：主元为1，其余元素为0的列向量
-			if(j==n){
-				st_matrix->vt[i].data[j].d /= pivot;
-			}else{
-				 st_matrix->vt[i].data[j].d -= (st_matrix->vt[i].data[j].d / pivot);
+			if(j!=n){
+				 st_matrix->vt[i].data[j].d -= (d * st_matrix->vt[m].data[j].d);
 			}
 		}
 	}
-	
+*/
+	st_matrix->vt[in].basic_flag=1;
+	st_matrix->vt[basic_position->data[out]].basic_flag=0;
+	basic_position->data[out]=in;
+	//交换位置后基在矩阵位置重新排序
+	qsort(basic_position->data,basic_position->size,sizeof(int),comp_basic_pos);
+	return 0;
+}
+
+double find_solution(vector_t *dest,int_arr_t *basic_position){
+
 }
 
 int main(int argc,char **argv){
@@ -220,16 +267,26 @@ int main(int argc,char **argv){
     matrix_t *st_matrix = (matrix_t *)malloc(sizeof(matrix_t));;
     //基可行解
     vector_t *feasible_solution = (vector_t *)malloc(sizeof(vector_t));
-    
+	// 基向量位于矩阵的位置 
+	int_arr_t *basic_position = (int_arr_t *)malloc(sizeof(int_arr_t));
+
 	// 文件读取数据
-	read_data(dest,st_matrix,feasible_solution);
+	read_data(dest,st_matrix,feasible_solution,basic_position);
 
     print_vector(dest);
     print_matrix(st_matrix);
     print_vector(feasible_solution);
+	print_array(basic_position);
+
+	int in=find_in_vector(dest,st_matrix);
+	int out=find_out_vector(st_matrix,in,feasible_solution);
+	printf("change pivot is in=%d,out=%d,val=%lf\n",in,out,st_matrix->vt[in].data[out].d);
+	matrix_element_transform(dest,st_matrix,in,out,feasible_solution,basic_position);	
+	printf("after matrix element tranform :\n");
+	print_matrix(st_matrix);
+	print_array(basic_position);
 	
-	int i=find_in_vector(dest,st_matrix);
-	int j=find_out_vector(st_matrix,i,feasible_solution);
-	printf("change pivot is i=%d,j=%d,val=%lf\n",i,j,st_matrix->vt[i].data[j].d);
+
+
 	return 0;
 }
