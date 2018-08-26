@@ -3,17 +3,17 @@
 #include<stdlib.h>
 #include<string.h>
 /*
-    ÏßĞÔ¹æ»®CÓïÑÔ
-    Çó½âËÉ³ÚĞÍÏßĞÔ¹æ»®
+    çº¿æ€§è§„åˆ’Cè¯­è¨€
+    æ±‚è§£æ¾å¼›å‹çº¿æ€§è§„åˆ’
 
-    ÀıÈç£º
+    ä¾‹å¦‚ï¼š
     max z=4x1+2x2
     st: -x1+2x2<=6
          x1+x2 <=9
         3x1-x2 <=15
          x1,x2>=0
 
-    1.»¯³ÉËÉ³ÚĞÍÓĞ£ºÆäÖĞx3,x4,x5ÎªÊ£Óà±äÁ¿
+    1.åŒ–æˆæ¾å¼›å‹æœ‰ï¼šå…¶ä¸­x3,x4,x5ä¸ºå‰©ä½™å˜é‡
     max z=4x1+2x2+0x3+0x4+0x5
     st: -x1+2x2+x3       =6
          x1+x2    +x4    =9
@@ -26,10 +26,23 @@
 #define BASIC_DATA 1
 #define NOT_BASIC_DATA 0
 
-//
+// æ£€æŸ¥æ£€éªŒå‚æ•°ï¼Œåˆ¤æ–­æ˜¯å¦æœ‰è§£ï¼Œè¾¾åˆ°æœ€ä¼˜è§£ï¼Œæ— ç©·è§£ï¼Œæ— ç•Œè§£ç­‰ç­‰
+// 1. æ‰€æœ‰æ£€éªŒå‚æ•°éƒ½å°äºç­‰äº0ï¼ŒéåŸºå˜é‡å°äº0ï¼Œåˆ™è¾¾åˆ°æœ€ä¼˜è§£
+// 2. æ‰€æœ‰æ£€éªŒå‚æ•°éƒ½å°äºç­‰äº0ï¼Œå­˜åœ¨æŸä¸ªéåŸºå˜é‡æ£€éªŒå‚æ•°ç­‰äº0ï¼Œåˆ™æœ‰æ— ç©·è§£
+// 3. å­˜åœ¨æŸä¸ªå˜é‡å¤§äº0ï¼Œè¯¥å˜é‡å¯¹åº”çš„çº¦æŸçŸ©é˜µå¯¹åº”çš„åˆ†å‘é‡çš„æ‰€æœ‰å€¼éƒ½å°äº0ï¼Œåˆ™æ˜¯æ— ç•Œè§£
+// 4. 
+
+//è§£å®šä¹‰
+#define CAN_DO_NEXT 1				//æœªè¾¾åˆ°æœ€ä¼˜è§£ï¼Œç»§ç»­æ‰§è¡Œ
+#define FIT_SOULTION 2 				//å­˜åœ¨æœ€ä¼˜è§£
+#define ENDLESS_SOULTION 3			//æ— ç©·è§£
+#define UNBOUNDED_SOULTION 4		//æ— ç•Œè§£
+#define NO_SOULTION 5				//æ— è§£
+
+//å®šä¹‰æ•´å‹æ•°ç»„
 typedef struct {
-	double d;			// Êı¾İ
-	int basic_flag;		// ÊÇ·ñ¶ÔÓ¦Îª»ù±äÁ¿
+	double d;			// æ•°æ®
+	int basic_flag;		// æ˜¯å¦å¯¹åº”ä¸ºåŸºå˜é‡
 }data_t;
 
 typedef struct{
@@ -38,30 +51,30 @@ typedef struct{
 	int *data;
 }int_arr_t;
 
-//¶¨ÒåÏòÁ¿½á¹¹Ìå
+//å®šä¹‰å‘é‡ç»“æ„ä½“
 typedef struct {
-    char *name;		//ÏòÁ¿Ãû³Æ
-    int m;			//ÏòÁ¿Î¬Êı
-    data_t *data;	//ÏòÁ¿Öµ
-	int basic_flag;	//ÊÇ·ñÎª»ùÏòÁ¿
+    char *name;		//å‘é‡åç§°
+    int m;			//å‘é‡ç»´æ•°
+    data_t *data;	//å‘é‡å€¼
+	int basic_flag;	//æ˜¯å¦ä¸ºåŸºå‘é‡
 }vector_t;
 
-// ¶¨Òå¾ØÕó½á¹¹Ìå
+// å®šä¹‰çŸ©é˜µç»“æ„ä½“
 typedef struct{
-    char *name;		//¾ØÕóÃû³Æ
-    int n;			//¾ØÕóÏòÁ¿¸öÊı
-    vector_t *vt;	//ÏòÁ¿Öµ
+    char *name;		//çŸ©é˜µåç§°
+    int n;			//çŸ©é˜µå‘é‡ä¸ªæ•°
+    vector_t *vt;	//å‘é‡å€¼
 }matrix_t;
 
 
-char *file_name="linear_programming_data_1.txt";
+char *file_name="linear_programming_data_unbounded.txt";
 
 int read_vector(FILE *f,vector_t *vt,int basic_start,int basic_end,const char *name){
 	int i;
 	vt->name=(char *)malloc(sizeof(char) * strlen(name));
 	memcpy(vt->name,name,strlen(name));
-	//¶ÁÈ¡ÏòÁ¿Î¬Êı£¬»ùÏòÁ¿ÆğÊ¼½áÊøÎ»ÖÃ
-	vt->data = (data_t *)malloc(sizeof(data_t *) * vt->m);
+	//è¯»å–å‘é‡ç»´æ•°ï¼ŒåŸºå‘é‡èµ·å§‹ç»“æŸä½ç½®
+	vt->data = (data_t *)malloc(sizeof(data_t) * vt->m);
 	for(i=0;i<vt->m;i++){
 		data_t dt;
 		fscanf(f,"%lf",&dt.d);
@@ -77,17 +90,21 @@ int read_vector(FILE *f,vector_t *vt,int basic_start,int basic_end,const char *n
 	return 0;
 }
 
-int read_data(vector_t *dest,matrix_t *st_matrix,vector_t *feasible_solution,int_arr_t *basic_position){
+int read_data(vector_t *dest,matrix_t *st_matrix,vector_t *feasible_solution,int_arr_t *basic_position,vector_t *check_param){
     FILE *f=fopen(file_name,"r");
     int i,j,basic_start,basic_end;
-    // 1. ¶ÁÈ¡Ä¿±êº¯Êı·Ç»ù±äÁ¿
-	// ¶ÁÈ¡ÏòÁ¿Î¬Êı£¬»ùÏòÁ¿ÆğÊ¼½áÊøÎ»ÖÃ
+    // 1. è¯»å–ç›®æ ‡å‡½æ•°éåŸºå˜é‡
+	// è¯»å–å‘é‡ç»´æ•°ï¼ŒåŸºå‘é‡èµ·å§‹ç»“æŸä½ç½®
     fscanf(f,"%d%d%d",&dest->m,&basic_start,&basic_end);
 	basic_position->name="basic position arr";
 	basic_position->size=basic_end - basic_start + 1;
 	basic_position->data=(int *)malloc(sizeof(int) * basic_position->size);
+	check_param->name="check_param vector";
+	check_param->m=dest->m;
+	check_param->data=(data_t *)malloc(sizeof(data_t) * dest->m);
+	
 	read_vector(f,dest,basic_start,basic_end,"dest");
-	// 2. ¶ÁÈ¡Ô¼ÊøÌõ¼ş¾ØÕó
+	// 2. è¯»å–çº¦æŸæ¡ä»¶çŸ©é˜µ
 	int m,k=0;
 	fscanf(f,"%d%d%d%d",&m,&st_matrix->n,&basic_start,&basic_end);
     st_matrix->name="st_matrix";
@@ -115,9 +132,8 @@ int read_data(vector_t *dest,matrix_t *st_matrix,vector_t *feasible_solution,int
 		}
 	}
 
-    //3 ¶ÁÈ¡·½³Ì×éÏµÊı£¬¼´³õÊ¼½â
-    fscanf(f,"%d",&feasible_solution->m);
-	basic_start=basic_end=-1;	
+    //3 è¯»å–æ–¹ç¨‹ç»„ç³»æ•°ï¼Œå³åˆå§‹è§£
+    fscanf(f,"%d%d%d",&feasible_solution->m,&basic_start,&basic_end);	
 	read_vector(f,feasible_solution,basic_start,basic_end,"feasible_solution");
 	fclose(f);
     return 0;
@@ -133,12 +149,12 @@ void print_vector(vector_t *v){
 }
 
 void print_array(int_arr_t *arr){
-	printf("\n\narray name : %s\n",arr->name);
+	printf("\narray name : %s\n",arr->name);
 	int i,size=arr->size;
 	for(i=0;i<size;i++){
 		printf("%d ",arr->data[i]);
 	}
-	printf("\n\n");
+	printf("\n");
 }
 
 void print_matrix(matrix_t *mx){
@@ -152,141 +168,214 @@ void print_matrix(matrix_t *mx){
         }
         printf("\n");
     }
-    printf("\n");
 }
 
-//²éÕÒ»»³ö»ù±äÁ¿,·µ»Ø¾ØÕóËùÔÚµÄĞĞÎ»ÖÃ
-int find_out_vector(matrix_t *st_matrix,int pos,vector_t *feasible_solution){
+//æŸ¥æ‰¾æ¢å‡ºåŸºå˜é‡,è¿”å›çŸ©é˜µæ‰€åœ¨çš„è¡Œä½ç½®ï¼Œå½“å‡ºç°ä¸¤ä¸ªæ¯”å€¼éƒ½ä¸ºæœ€å°æ—¶ï¼Œé€‰å–ä¸‹æ ‡æœ€å°çš„åŸºå˜é‡ä¸ºæ¢å‡ºå˜é‡
+int find_out_vector(matrix_t *st_matrix,int pos,vector_t *feasible_solution,int_arr_t *basic_position){
 	double min=-1;
-	//»»³ö»ù±äÁ¿Î»ÖÃÎª[pos,j]
-	int i,j=-1;
+	//æ¢å‡ºåŸºå˜é‡ä½ç½®ä¸º[pos,j]
+	int i,j=-1,k;
 
-	for(i=0;i<feasible_solution->m;i++){
-		// »ù¿ÉĞĞ½âÖĞ»ù±äÁ¿£¬²¢ÇÒÔ¼Êø¾ØÕóÖĞ»»Èë±äÁ¿Î»ÖÃÔªËØ´óÓÚ0
-		// ·Ç»ùÔ¼ÊøÏòÁ¿Ğ¡ÓÚµÈÓÚ0µÄ²»ÓÃ¼ÆËã
+	for(i=0;i<basic_position->size;i++){
+		// åŸºå¯è¡Œè§£ä¸­åŸºå˜é‡ï¼Œå¹¶ä¸”çº¦æŸçŸ©é˜µä¸­æ¢å…¥å˜é‡ä½ç½®å…ƒç´ å¤§äº0
+		// éåŸºçº¦æŸå‘é‡å°äºç­‰äº0çš„ä¸ç”¨è®¡ç®—
 		if(st_matrix->vt[pos].data[i].d <= 0)
 			continue;
-		double d = feasible_solution->data[i].d / st_matrix->vt[pos].data[i].d;
+		double d = feasible_solution->data[basic_position->data[i]].d / st_matrix->vt[pos].data[i].d;
 //		printf("pos=%d,t_matrix->vt[pos].data[%d].d=%lf,i=%d,min=%lf,d=%lf\n",pos,k,st_matrix->vt[pos].data[k].d,i,min,d);
 		if(min<0 || d>0 && d<min){
 			min=d;
 			j=i;
 		}
 	}
+	printf("fit out vector position is:%d\n",j);
 	return j;
 }
 
-// ¼ÆËãZj
-double calc_check_param(vector_t *dest,matrix_t *st_matrix,int pos){
+// è®¡ç®—Zj
+double calc_check_param(vector_t *dest,matrix_t *st_matrix,int pos,int_arr_t *basic_position){
 	double res=0;
 	int i;
-	for(i=0;i<dest->m;i++){
-		//·Ç»ù±äÁ¿²»²ÎÓë¼ÆËã
-		if(dest->data[i].basic_flag != BASIC_DATA)
-			continue;
-		res += (dest->data[i].d * st_matrix->vt[pos].data[i].d);
+	for(i=0;i<basic_position->size;i++){
+		//éåŸºå˜é‡ä¸å‚ä¸è®¡ç®—
+		res += (dest->data[basic_position->data[i]].d * st_matrix->vt[pos].data[i].d);
 	}
 	return res;
 }
 
-//²éÕÒ»»³ö»ù±äÁ¿Î»ÖÃ,CB-Aij
-int find_in_vector(vector_t *dest,matrix_t *st_matrix){
-	//¼ìÑé²ÎÊı×î´óÖµ
-	double check_param[dest->m];
+//æŸ¥æ‰¾æ¢å…¥åŸºå˜é‡ä½ç½®,CB-Aij
+int find_in_vector(vector_t *dest,matrix_t *st_matrix,int_arr_t *basic_position,vector_t *check_param){
+	//æ£€éªŒå‚æ•°æœ€å¤§å€¼
 	double max;
 	int i,pos=-1;
-	for(i=0;i<dest->m;i++){
-		//¼ìÑé²ÎÊı Cj-Zj
-		check_param[i]=dest->data[i].d-calc_check_param(dest,st_matrix,i);
-		if(check_param[i]>max){
-			max=check_param[i];
+	for(i=0;i<st_matrix->n;i++){
+		data_t dt;
+		//æ£€éªŒå‚æ•° Cj-Zj
+		dt.d=dest->data[i].d-calc_check_param(dest,st_matrix,i,basic_position);
+		dt.basic_flag=NOT_BASIC_DATA;
+		if(dt.d>max){
+			max=dt.d;
 			pos=i;
 		}
+		check_param->data[i]=dt;
 	}
 	if(max<0){
 		printf("all not basic dest are less than 0\n");
 	}
-	printf("fit vector position is:%d\n",pos);
+	printf("fit in vector position is:%d\n",pos);
 	return pos;
 }
 
-int comp_basic_pos(const void* bp1,const void* bp2){
-	return *(int *)bp1-*(int *)bp2;
-}
-
-// ¶Ô¾ØÕóÖĞÖ÷ÔªÎ»ÖÃst_matrix[in][out]µÄÔªËØĞĞ³õµÈ±ä»»
+// å¯¹çŸ©é˜µä¸­ä¸»å…ƒä½ç½®st_matrix[in][out]çš„å…ƒç´ è¡Œåˆç­‰å˜æ¢
+// å½“å‰è¡Œä¸ä¸»å…ƒæ‰€åœ¨çš„è¡Œä¸€è‡´ï¼Œè¯¥è¡Œæ‰€æœ‰å…ƒç´ é™¤ä¸»å…ƒå€¼ï¼Œå°†ä¸»å…ƒå€¼åŒ–æˆ1ã€‚å¦‚æœä¸æ˜¯åˆ™å°†ä¸»å…ƒå¯¹åº”çš„åˆ—å‘é‡å…¶ä»–å…ƒç´ æ¢æˆ0ï¼Œä½¿ä¸»å…ƒæ‰€åœ¨çš„åˆ—å‘é‡ä¸ºï¼šä¸»å…ƒä¸º1ï¼Œå…¶ä½™å…ƒç´ ä¸º0çš„åˆ—å‘é‡
 int matrix_element_transform(vector_t *dest,matrix_t *st_matrix,int in,int out,vector_t *feasible_solution,int_arr_t *basic_position){
-	// 1.²éÕÒ»»³ö»ùÏòÁ¿
+	
+	// 1.æŸ¥æ‰¾æ¢å‡ºåŸºå‘é‡
 	double pivot=st_matrix->vt[in].data[out].d;
 
 	int i,j;
-	//Ö÷ÔªËùÔÚµÄĞĞ³ıÒÔÖ÷ÔªµÄÖµ£¬½«Ö÷Ôª»¯³É1
+	//ä¸»å…ƒæ‰€åœ¨çš„è¡Œé™¤ä»¥ä¸»å…ƒçš„å€¼ï¼Œå°†ä¸»å…ƒåŒ–æˆ1
 	for(i=0;i<st_matrix->n;i++){
 		st_matrix->vt[i].data[out].d/=pivot;
 	}
+	
+	// è§£å‘é‡ä¹Ÿéœ€å˜æ¢
+	feasible_solution->data[basic_position->data[out]].d/=pivot;
 
-	// ÏòÁ¿Î¬Êı,°´ĞĞÏòÁ¿½øĞĞ±ä»»
+	// å‘é‡ç»´æ•°,æŒ‰è¡Œå‘é‡è¿›è¡Œå˜æ¢
 	int matrix_m=st_matrix->vt[in].m;
 	for(i=0;i<matrix_m;i++){
-		// ËùÔÚµÄĞĞµÈÓÚ»»³öµÄĞĞËùÔÚ£¬Ç°ÃæÒÑ´¦Àí
+		// æ‰€åœ¨çš„è¡Œç­‰äºæ¢å‡ºçš„è¡Œæ‰€åœ¨ï¼Œå‰é¢å·²å¤„ç†
 		if(i==out) continue;
-		//Ö÷ÔªËùÔÚµÄÁĞÏòÁ¿m¶ÔÓ¦µÄµÚi¸öÔªËØ
+		//ä¸»å…ƒæ‰€åœ¨çš„åˆ—å‘é‡må¯¹åº”çš„ç¬¬iä¸ªå…ƒç´ 
 		double d=st_matrix->vt[in].data[i].d;
 		for(j=0;j<st_matrix->n;j++){
 			st_matrix->vt[j].data[i].d -= (d * st_matrix->vt[j].data[out].d);
 		}
+		feasible_solution->data[basic_position->data[i]].d -= (d * feasible_solution->data[basic_position->data[out]].d);
 	}
 
-/*
-	for(i=0;i<st_matrix->n;i++){
-		double d=st_matrix->vt[i].data[n].d;
-		for(j=0;j<st_matrix->vt[i].m;j++){
-// µ±Ç°ĞĞÓëÖ÷ÔªËùÔÚµÄĞĞÒ»ÖÂ£¬¸ÃĞĞËùÓĞÔªËØ³ıÖ÷ÔªÖµ£¬½«Ö÷ÔªÖµ»¯³É1¡£Èç¹û²»ÊÇÔò½«Ö÷Ôª¶ÔÓ¦µÄÁĞÏòÁ¿ÆäËûÔªËØ»»³É0£¬Ê¹Ö÷ÔªËùÔÚµÄÁĞÏòÁ¿Îª£ºÖ÷ÔªÎª1£¬ÆäÓàÔªËØÎª0µÄÁĞÏòÁ¿
-			if(j!=n){
-				 st_matrix->vt[i].data[j].d -= (d * st_matrix->vt[m].data[j].d);
-			}
-		}
-	}
-*/
-	st_matrix->vt[in].basic_flag=1;
-	st_matrix->vt[basic_position->data[out]].basic_flag=0;
+	//è§£å‘é‡å‡ºå…¥æ›¿æ¢ï¼ŒåŸºæ ‡å¿—ä½æ›¿æ¢
+	feasible_solution->data[in].basic_flag = BASIC_DATA;
+	feasible_solution->data[basic_position->data[out]].basic_flag = NOT_BASIC_DATA;
+	double d = feasible_solution->data[in].d;
+	feasible_solution->data[in].d = feasible_solution->data[basic_position->data[out]].d;
+	feasible_solution->data[basic_position->data[out]].d = d;
+	
+	st_matrix->vt[in].basic_flag=BASIC_DATA;
+	st_matrix->vt[basic_position->data[out]].basic_flag=NOT_BASIC_DATA;
 	basic_position->data[out]=in;
-	//½»»»Î»ÖÃºó»ùÔÚ¾ØÕóÎ»ÖÃÖØĞÂÅÅĞò
-	qsort(basic_position->data,basic_position->size,sizeof(int),comp_basic_pos);
+
 	return 0;
 }
 
-double find_solution(vector_t *dest,int_arr_t *basic_position){
-
+// è®¡ç®—è§£ï¼Œç›®æ ‡å‡½æ•°éåŸºå˜é‡ä¸å‚ä¸è®¡ç®—ï¼ŒZ=CX= 
+double find_solution(vector_t *dest,int_arr_t *basic_position,vector_t *feasible_solution){
+	double res = 0;
+	int i;
+	// å°†åŸºå‘é‡æ‰€åœ¨çš„å€¼
+	for(i=0;i<basic_position->size;i++){
+		res += (dest->data[basic_position->data[i]].d * feasible_solution->data[basic_position->data[i]].d);
+	}
+	return res;
 }
 
+int check_vector_all_less_d(vector_t *vt,double d){
+	int i;
+	for(i=0;i<vt->m;i++){
+		if(vt->data[i].d>d)	return 0;
+	}
+	return 1;
+}
+
+/* æ£€æŸ¥æ£€éªŒå‚æ•°ï¼Œåˆ¤æ–­æ˜¯å¦æœ‰è§£ï¼Œè¾¾åˆ°æœ€ä¼˜è§£ï¼Œæ— ç©·è§£ï¼Œæ— ç•Œè§£ç­‰ç­‰
+ 1. æ‰€æœ‰æ£€éªŒå‚æ•°éƒ½å°äºç­‰äº0ï¼ŒéåŸºå˜é‡å°äº0ï¼Œåˆ™è¾¾åˆ°æœ€ä¼˜è§£
+ 2. æ‰€æœ‰æ£€éªŒå‚æ•°éƒ½å°äºç­‰äº0ï¼Œå­˜åœ¨æŸä¸ªéåŸºå˜é‡æ£€éªŒå‚æ•°ç­‰äº0ï¼Œåˆ™æœ‰æ— ç©·è§£
+ 3. å­˜åœ¨æŸä¸ªå˜é‡å¤§äº0ï¼Œè¯¥å˜é‡å¯¹åº”çš„çº¦æŸçŸ©é˜µç›¸åº”çš„åˆ†å‘é‡çš„æ‰€æœ‰å€¼éƒ½å°äº0ï¼Œåˆ™æ˜¯æ— ç•Œè§£
+ 4. å­˜åœ¨æŸä¸ªå˜é‡å¤§äº0ï¼Œè¯¥å˜é‡å¯¹åº”çš„çº¦æŸçŸ©é˜µç›¸åº”çš„åˆ†é‡æœ‰å¤§äº0æƒ…å†µï¼Œåˆ™éœ€ç»§ç»­å˜æ¢
+ 5. å­˜åœ¨äººå·¥å˜é‡ä¸ä¸º0ï¼Œæš‚æ˜¯æ²¡æœ‰è€ƒè™‘äººå·¥å˜é‡æƒ…å†µï¼Œä¸è€ƒè™‘æ— è§£
+*/
+ int check_soultion(vector_t *check_param,matrix_t *st_matrix){
+	int i,can_do_next = 0,endless_soultion=0 ;
+	for(i=0;i<check_param->m;i++){
+		// å­˜åœ¨æ£€éªŒå‚æ•°å¤§äº0ï¼Œåˆ¤æ–­æ‰€åœ¨çš„çº¦æŸçŸ©é˜µåˆ†å‘é‡æƒ…å†µï¼Œå…¨éƒ¨å°äº0ï¼Œè¿”å›æ— ç•Œè§£
+		if(check_param->data[i].d>0){
+			if(check_vector_all_less_d(st_matrix->vt + i,0))
+				return UNBOUNDED_SOULTION;
+			else 
+				can_do_next = CAN_DO_NEXT;
+		}
+		//å­˜åœ¨æ£€éªŒå‚æ•°ç­‰äº0ï¼Œå¦‚æœæ˜¯éåŸºå˜é‡ï¼Œåˆ™æœ‰æ— ç©·è§£
+		if(check_param->data[i].d == 0 && st_matrix->vt[i].basic_flag != BASIC_DATA){
+			endless_soultion = ENDLESS_SOULTION;
+		}
+	}
+	// å¦‚æœå…¨éƒ¨å‚æ•°éƒ½å°äº0ï¼Œåˆ™æœ‰æœ€ä¼˜è§£
+	return can_do_next ? CAN_DO_NEXT : endless_soultion ? ENDLESS_SOULTION : FIT_SOULTION;
+}
+
+
+
 int main(int argc,char **argv){
-    //Ä¿±êº¯ÊıÏµÊıÏòÁ¿
+	if(argc > 1){
+		file_name = argv[1];
+	}
+	
+    //ç›®æ ‡å‡½æ•°ç³»æ•°å‘é‡
     vector_t *dest = (vector_t *)malloc(sizeof(vector_t));
-    // Ô¼Êø¾ØÕó
+    // çº¦æŸçŸ©é˜µ
     matrix_t *st_matrix = (matrix_t *)malloc(sizeof(matrix_t));;
-    //»ù¿ÉĞĞ½â
+    //åŸºå¯è¡Œè§£
     vector_t *feasible_solution = (vector_t *)malloc(sizeof(vector_t));
-	// »ùÏòÁ¿Î»ÓÚ¾ØÕóµÄÎ»ÖÃ 
+	
+	//æ£€éªŒå‚æ•° 
+	vector_t *check_param = (vector_t *)malloc(sizeof(vector_t));
+	
+	// åŸºå‘é‡ä½äºçŸ©é˜µçš„ä½ç½® 
 	int_arr_t *basic_position = (int_arr_t *)malloc(sizeof(int_arr_t));
 
-	// ÎÄ¼ş¶ÁÈ¡Êı¾İ
-	read_data(dest,st_matrix,feasible_solution,basic_position);
-
-    print_vector(dest);
-    print_matrix(st_matrix);
-    print_vector(feasible_solution);
-	print_array(basic_position);
-
-	int in=find_in_vector(dest,st_matrix);
-	int out=find_out_vector(st_matrix,in,feasible_solution);
-	printf("change pivot is in=%d,out=%d,val=%lf\n",in,out,st_matrix->vt[in].data[out].d);
-	matrix_element_transform(dest,st_matrix,in,out,feasible_solution,basic_position);	
-	printf("after matrix element tranform :\n");
-	print_matrix(st_matrix);
-	print_array(basic_position);
+	// æ–‡ä»¶è¯»å–æ•°æ®
+	read_data(dest,st_matrix,feasible_solution,basic_position,check_param);
 	
-
-
+	int cnt=1,in,out,check_soultion_res;
+	//è¿­ä»£æŸ¥æ‰¾è§£
+	while(1){
+		printf("\nNO:%d transform\n",cnt++);
+		print_vector(dest);
+		print_matrix(st_matrix);
+		print_vector(feasible_solution);
+		print_array(basic_position);
+		in=find_in_vector(dest,st_matrix,basic_position,check_param);
+		check_soultion_res = check_soultion(check_param,st_matrix);
+		if(check_soultion_res != CAN_DO_NEXT) break;
+		out=find_out_vector(st_matrix,in,feasible_solution,basic_position);
+		printf("change pivot is in=%d,out=%d,val=%lf,res=%lf\n",in,out,st_matrix->vt[in].data[out].d,find_solution(dest, basic_position,feasible_solution));
+		matrix_element_transform(dest,st_matrix,in,out,feasible_solution,basic_position);
+		printf("\nafter matrix element tranform :\n");
+		print_matrix(st_matrix);
+		print_array(basic_position);
+		print_vector(feasible_solution);
+		print_vector(check_param);
+	}
+	
+	//è§£åˆ¤æ–­
+	switch(check_soultion_res){
+		case FIT_SOULTION : 
+			printf("find fitness soultion, answer is : %lf\n",find_solution(dest, basic_position,feasible_solution));
+			print_vector(feasible_solution);
+			break;
+		case ENDLESS_SOULTION :
+			printf("find endless soultion, one of is %lf\n",find_solution(dest, basic_position,feasible_solution));
+			print_vector(feasible_solution);
+			break;
+		case UNBOUNDED_SOULTION :
+			printf("UNBOUNDED_SOULTION\n");
+			break;
+		case NO_SOULTION : 
+			printf("NO_SOULTION \n");
+			break;
+		default :
+			printf("unknow soultion type \n");
+		}
 	return 0;
 }
