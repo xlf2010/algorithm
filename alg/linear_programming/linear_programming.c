@@ -3,7 +3,7 @@
 #include<stdlib.h>
 #include<string.h>
 /*
-    线性规划C语言
+    线性规划C语言，单纯型法，基于单纯型表计算
     求解松弛型线性规划
 
     例如：
@@ -357,6 +357,7 @@ int main(int argc,char **argv){
 		print_array(basic_position);
 		print_vector(feasible_solution);
 		print_vector(check_param);
+		print_vector(dest);
 	}
 	
 	//解判断

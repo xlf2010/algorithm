@@ -2,7 +2,8 @@
 #include<math.h>
 #include<stdlib.h>
 /*
-    线性规划C语言
+    线性规划C语言，改进单纯型法，基于矩阵计算，
+	不需计算约束矩阵的每个元素,即非基变量中不属于代入基变量的各列数字在迭代中没有用到，当非基变量越多时，计算量减少越明显
     求解松弛型线性规划
 
     例如：
@@ -22,91 +23,153 @@
 
 */
 
+#define BASIC_DATA 1
+#define NOT_BASIC_DATA 0
+
+// 检查检验参数，判断是否有解，达到最优解，无穷解，无界解等等
+// 1. 所有检验参数都小于等于0，非基变量小于0，则达到最优解
+// 2. 所有检验参数都小于等于0，存在某个非基变量检验参数等于0，则有无穷解
+// 3. 存在某个变量大于0，该变量对应的约束矩阵对应的分向量的所有值都小于0，则是无界解
+// 4. 
+
+//解定义
+#define CAN_DO_NEXT 1				//未达到最优解，继续执行
+#define FIT_SOULTION 2 				//存在最优解
+#define ENDLESS_SOULTION 3			//无穷解
+#define UNBOUNDED_SOULTION 4		//无界解
+#define NO_SOULTION 5				//无解
+
+//定义整型数组
+typedef struct {
+	double d;			// 数据
+	int basic_flag;		// 是否对应为基变量
+}data_t;
+
+typedef struct{
+	char *name;
+	int size;
+	int *data;
+}int_arr_t;
+
 //定义向量结构体
 typedef struct {
-    char *name;
-    int len;
-    double *data;
+    char *name;		//向量名称
+    int m;			//向量维数
+    data_t *data;	//向量值
+	int basic_flag;	//是否为基向量
 }vector_t;
 
 // 定义矩阵结构体
 typedef struct{
-    char *name;
-    int m,n;
-    double **data;
+    char *name;		//矩阵名称
+    int n;			//矩阵向量个数
+    vector_t *vt;	//向量值
 }matrix_t;
 
 
-char *file_name="linear_programming_data.txt";
+char *file_name="linear_programming_data_unbounded.txt";
 
-int read_data(vector_t *dest,vector_t *dest_basic,matrix_t *not_basic_matrix,matrix_t *basic_matrix,vector_t *feasible_solution){
+int read_vector(FILE *f,vector_t *vt,int basic_start,int basic_end,const char *name){
+	int i;
+	vt->name=(char *)malloc(sizeof(char) * strlen(name));
+	memcpy(vt->name,name,strlen(name));
+	//读取向量维数，基向量起始结束位置
+	vt->data = (data_t *)malloc(sizeof(data_t) * vt->m);
+	for(i=0;i<vt->m;i++){
+		data_t dt;
+		fscanf(f,"%lf",&dt.d);
+		if(i>=basic_start && i<=basic_end){
+			dt.basic_flag=BASIC_DATA;
+		}else{
+			dt.basic_flag=NOT_BASIC_DATA;
+		}
+		vt->data[i]=dt;
+	}
+
+
+	return 0;
+}
+
+int read_data(vector_t *dest,matrix_t *st_matrix,vector_t *feasible_solution,int_arr_t *basic_position,vector_t *check_param){
     FILE *f=fopen(file_name,"r");
-    int i,j;
+    int i,j,basic_start,basic_end;
     // 1. 读取目标函数非基变量
-    dest->name="dest";
-    fscanf(f,"%d",&dest->len);
-    dest->data = (double *)malloc(sizeof(double *) * dest->len);
-    for(i=0;i<dest->len;i++){
-       fscanf(f,"%lf",dest->data+i);
-    }
-    // 2. 读取目标函数基变量
-    fscanf(f,"%d",&dest_basic->len);
-    dest_basic->name="dest_basic";
-    dest_basic->data = (double *)malloc(sizeof(double *) * dest_basic->len);
-    for(i=0;i<dest_basic->len;i++){
-       fscanf(f,"%lf",dest_basic->data+i);
-    }
-    // 3. 读取约束条件非基矩阵
-    fscanf(f,"%d%d",&not_basic_matrix->m,&not_basic_matrix->n);
-    not_basic_matrix->name="not_basic_matrix";
-    not_basic_matrix->data=(double **)malloc(sizeof(double **) * not_basic_matrix->m);
-    for(i=0;i<not_basic_matrix->m;i++){
-        not_basic_matrix->data[i] = (double *)malloc(sizeof(double *) * not_basic_matrix->n);
-        for(j=0;j<not_basic_matrix->n;j++){
-            fscanf(f,"%lf",not_basic_matrix->data[i] + j);
-        }
-    }
-    // 4. 读取约束条件基矩阵
-    fscanf(f,"%d%d",&basic_matrix->m,&basic_matrix->n);
-    basic_matrix->name="basic_matrix";
-    basic_matrix->data=(double **)malloc(sizeof(double **) * basic_matrix->m);
-    for(i=0;i<basic_matrix->m;i++){
-        basic_matrix->data[i] = (double *)malloc(sizeof(double *) * basic_matrix->n);
-        for(j=0;j<basic_matrix->n;j++){
-            fscanf(f,"%lf",basic_matrix->data[i] + j);
-        }
-    }
-    //5 读取基可行解
-    fscanf(f,"%d",&feasible_solution->len);
-    feasible_solution->name="feasible_solution";
-    feasible_solution->data = (double *)malloc(sizeof(double *) * feasible_solution->len);
-    for(i=0;i<feasible_solution->len;i++){
-       fscanf(f,"%lf",feasible_solution->data + i);
-    }
-    fclose(f);
+	// 读取向量维数，基向量起始结束位置
+    fscanf(f,"%d%d%d",&dest->m,&basic_start,&basic_end);
+	basic_position->name="basic position arr";
+	basic_position->size=basic_end - basic_start + 1;
+	basic_position->data=(int *)malloc(sizeof(int) * basic_position->size);
+	check_param->name="check_param vector";
+	check_param->m=dest->m;
+	check_param->data=(data_t *)malloc(sizeof(data_t) * dest->m);
+	
+	read_vector(f,dest,basic_start,basic_end,"dest");
+	// 2. 读取约束条件矩阵
+	int m,k=0;
+	fscanf(f,"%d%d%d%d",&m,&st_matrix->n,&basic_start,&basic_end);
+    st_matrix->name="st_matrix";
+    st_matrix->vt=(vector_t *)malloc(sizeof(vector_t) * st_matrix->n);
+	 
+	for(i=0;i<st_matrix->n;i++){
+		vector_t vt;
+		vt.m=m;
+		vt.data=(data_t *)malloc(sizeof(data_t) * m);
+		//		read_vector(f,vt,basic_start,basic_end,"");
+		if(i>=basic_start && i<=basic_end){
+			vt.basic_flag=BASIC_DATA;
+			basic_position->data[k++]=i;
+		}else{
+			vt.basic_flag=NOT_BASIC_DATA;
+		}
+		st_matrix->vt[i] = vt;
+	}
+	
+	for(i=0;i<m;i++){
+		for(j=0;j<st_matrix->n;j++){
+			data_t dt;
+			fscanf(f,"%lf",&dt.d);
+			st_matrix->vt[j].data[i]=dt;
+		}
+	}
+
+    //3 读取方程组系数，即初始解
+    fscanf(f,"%d%d%d",&feasible_solution->m,&basic_start,&basic_end);	
+	read_vector(f,feasible_solution,basic_start,basic_end,"feasible_solution");
+	fclose(f);
     return 0;
 }
 
 void print_vector(vector_t *v){
     int i;
     printf("vector name : %s\n   ",v->name);
-    for(i=0;i<v->len;i++){
-        printf("%lf ",v->data[i]);
+    for(i=0;i<v->m;i++){
+        printf("%lf,%d ",v->data[i].d,v->data[i].basic_flag);
     }
     printf("\n");
 }
 
+void print_array(int_arr_t *arr){
+	printf("\narray name : %s\n",arr->name);
+	int i,size=arr->size;
+	for(i=0;i<size;i++){
+		printf("%d ",arr->data[i]);
+	}
+	printf("\n");
+}
+
 void print_matrix(matrix_t *mx){
     int i,j;
-    printf("matrix name : %s\n ",mx->name);
-    for(i=0;i<mx->m;i++){
-        for(j=0;j<mx->n;j++){
-            printf("%lf ",mx->data[i][j]);
+    printf("matrix name : %s\n",mx->name);
+    for(i=0;i<mx->n;i++){
+		vector_t *vt=mx->vt+i;
+		printf("basic_flag:%d ",vt->basic_flag);
+        for(j=0;j<vt->m;j++){
+            printf("%lf ",vt->data[j].d);
         }
         printf("\n");
     }
-    printf("\n");
 }
+
 
 //两个向量交换元素
 int switch_element_in_vector(vector_t *t1,int pos1,vector_t *t2,int pos2){
